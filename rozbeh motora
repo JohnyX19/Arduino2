@@ -1,0 +1,42 @@
+
+
+#define m1_EL_Start_Stop 39
+#define m1_ZF_Direction 38
+#define m1_Signal_hall 2
+#define m1_VR_speed 4
+
+void setup() 
+{
+  Serial.begin(9600);
+  
+  pinMode(m1_EL_Start_Stop, OUTPUT);//stop/start - EL 
+  pinMode(m1_Signal_hall, INPUT);   //plus       - Signal  
+  pinMode(m1_ZF_Direction, OUTPUT); //direction  - ZF 
+
+}
+
+void wheelStop()
+{
+  digitalWrite(m1_EL_Start_Stop,LOW);
+}
+
+void wheelMoveForward(int speed1)
+{
+  analogWrite(m1_VR_speed, speed1);
+  digitalWrite(m1_ZF_Direction,HIGH);
+  digitalWrite(m1_EL_Start_Stop,HIGH);
+}
+
+void wheelMoveBackward(int speed1)
+{
+  analogWrite(m1_VR_speed, speed1);
+  digitalWrite(m1_ZF_Direction,LOW);
+  digitalWrite(m1_EL_Start_Stop,HIGH);
+}
+
+void loop() 
+{
+  //wheelMoveForward(100);
+  //wheelMoveBackward(100);
+}
+
