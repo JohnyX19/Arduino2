@@ -1,0 +1,125 @@
+
+// zobrazuje počet impulov/otacok, prepinač smeru je na pine 8
+
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+
+#define m1_EL_Start_Stop 4  
+#define m1_Signal_hall 3
+#define m1_ZF_Direction 2
+#define m1_VR_speed 5
+
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+int readValue = 0;
+int sendValue = 0;
+
+void setup() 
+{
+  Serial.begin(9600);
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) 
+  {
+    for(;;);
+  }
+  zobraz(0, 0); 
+  pinMode(m1_EL_Start_Stop, OUTPUT);
+  pinMode(m1_Signal_hall, INPUT);  
+  pinMode(m1_ZF_Direction, OUTPUT);
+  pinMode(m1_VR_speed, OUTPUT);
+  
+  pinMode(8, INPUT);
+  attachInterrupt(digitalPinToInterrupt(m1_Signal_hall), plus, CHANGE);
+}
+
+// 0-F, 1-B
+int poloha = 0;
+int steps=0;
+void plus() 
+{
+  if(poloha == 0)
+  {
+    steps++;
+  }
+  else
+  {
+    steps--;
+  }
+}
+
+void zobraz(int c, int a)
+{
+    display.clearDisplay();
+    display.setTextSize(3);
+    display.setTextColor(WHITE);
+    display.setCursor(0, 10);
+    display.println(c);
+    display.println(a);
+    display.display();
+}
+
+void wheelstop()
+{
+  digitalWrite(m1_EL_Start_Stop,LOW);
+}
+
+void wheelMoveF(int speedM)
+{
+  poloha = 0;
+  analogWrite(m1_VR_speed, speedM);
+  digitalWrite(m1_EL_Start_Stop,HIGH);
+  digitalWrite(m1_ZF_Direction,LOW);
+}
+
+void wheelMoveB(int speedM)
+{
+  poloha = 1;
+  analogWrite(m1_VR_speed, speedM);
+  digitalWrite(m1_EL_Start_Stop,HIGH);
+  digitalWrite(m1_ZF_Direction,HIGH);
+}
+
+void loop() 
+{
+  readValue = analogRead(A0);
+  sendValue = map(readValue, 0, 1024, 0, 255);
+  
+  if(sendValue > 0)
+  {
+    if(digitalRead(8) == 0)
+    {
+      wheelMoveF(sendValue);
+    }
+    else if(digitalRead(8) == 1)
+    {
+      wheelMoveB(sendValue);
+    }
+    else
+    {
+      wheelstop();
+    }
+  }
+  else
+  {
+    wheelstop();
+  }
+
+
+  delay(10);
+  zobraz(steps, sendValue);
+/*
+  Serial.print("smer otacania : ");
+  Serial.println(digitalRead(8));
+  Serial.print("potenciometer : ");
+  Serial.println(sendValue);
+  Serial.print("impulzy : ");
+  Serial.println(steps);
+*/
+
+}
+
+
+
