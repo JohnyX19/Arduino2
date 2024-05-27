@@ -1,0 +1,123 @@
+
+#include <Wire.h>
+
+// eeprom support variables + functions
+#define eeprom B1010000
+
+char valueMemory[50];
+String msgStringMemory;
+long count_impulse_m1;
+
+int statusPosition;
+int poloha = 0;
+long pos_m1=0;
+
+void writeAT24( int deviceAddress, unsigned int msgReadAddress, byte* data, byte dataLength ) 
+{
+  Wire.beginTransmission(deviceAddress);
+  Wire.write((int)(msgReadAddress >> 8));
+  Wire.write((int)(msgReadAddress & 0xFF));
+  byte c;
+  for ( c = 0; c < dataLength; c++)
+  {
+    Wire.write(data[c]);
+  }
+  Wire.endTransmission();
+}
+
+void readAT24( int deviceAddress, unsigned int readAddress, byte *buffer, int dataLength ) 
+{
+  Wire.beginTransmission(deviceAddress);
+  Wire.write((int)(readAddress >> 8)); 
+  Wire.write((int)(readAddress & 0xFF)); 
+  Wire.endTransmission();
+  Wire.requestFrom(deviceAddress,dataLength);
+  int c = 0;
+  for ( c = 0; c < dataLength; c++ )
+  {
+    if (Wire.available())
+    {
+      buffer[c] = Wire.read();
+    }
+  }
+}
+
+void savePositionToMemory(String i)
+{
+  msgStringMemory = i;
+  msgStringMemory.toCharArray(valueMemory, sizeof(valueMemory));
+  writeAT24(eeprom, 100, (byte *)valueMemory, sizeof(valueMemory));
+}
+
+void loadPositionFromMemory()
+{
+  readAT24(eeprom, 100, (byte *)valueMemory, sizeof(valueMemory));
+  delay(100);
+  String msgStringMemory_m(valueMemory);
+  msgStringMemory = msgStringMemory_m;
+}
+
+void saveValuesPosition(int p, unsigned int m1, unsigned int m2, unsigned int m3, unsigned int m4)
+{
+  String msgP = String(p);
+  String msg_m1 = String(m1);
+  String msg_m2 = String(m2);
+  String msg_m3 = String(m3);
+  String msg_m4 = String(m4);
+
+  String msg = msgP + ":" + msg_m1 + ":" + msg_m2 + ":" + msg_m3 + ":" + msg_m4;
+  savePositionToMemory(msg);
+  //Serial.print("Ulozene hodnoty : ");
+  //Serial.println(msg);
+}
+
+void loadValuesPosition(String s)
+{
+  int s_int = s.length()+1;
+  char char_array[s_int];
+  s.toCharArray(char_array, s_int);
+  
+  char *strings[5];
+  char *ptr = NULL;
+    
+  byte index = 0;
+  ptr = strtok(char_array, ":");
+  while (ptr != NULL)
+  {
+    strings[index] = ptr;
+    index++;
+    ptr = strtok(NULL, ":");
+  }
+  
+  statusPosition = atoi(strings[0]);
+  count_impulse_m1 = atoi(strings[1]);
+
+  poloha = statusPosition;
+  pos_m1 = count_impulse_m1;
+  //Serial.print("Nacitna poloha : ");
+  //Serial.println(poloha);
+}
+
+
+void setup() 
+{
+    Serial.begin(9600);
+    Serial.println("...");
+    loadPositionFromMemory();
+    loadValuesPosition(msgStringMemory);
+    Serial.println(pos_m1);
+}
+
+
+void loop() 
+{
+  for(int i = 0; i < 100; i++)
+  {
+    saveValuesPosition(poloha, i, 0, 0, 0);
+    delay(1000);
+    Serial.println(i);
+  }
+}
+
+
+
