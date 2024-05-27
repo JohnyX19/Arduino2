@@ -1,0 +1,55 @@
+// zapojeny I out na A0
+
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+float ascCurr_m1 = 0.0;
+float ascCurrCom_m1 = 0.0;
+
+void setDisplay(float x)
+{
+    display.clearDisplay();
+    display.setTextSize(2);
+    display.setTextColor(WHITE);
+    display.setCursor(0, 10);
+    display.print(x);
+    
+    display.display();
+}
+
+void currentValueMotor()
+{
+    int analog1 = 0;
+    float u1 = 0.0;
+    float sucet1 = 0;
+    
+    for (int x = 0; x < 50; x++)
+    {
+      analog1 = analogRead(A0); 
+      u1 = (analog1*5000.0) / 1023.0;
+      ascCurrCom_m1 = (u1-2500)/66;
+      sucet1 += ascCurrCom_m1;
+    }
+    ascCurrCom_m1 = sucet1/50;
+}
+
+void setup() 
+{
+    if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) 
+    {
+      //Serial.println(F("SSD1306 allocation failed"));
+      for(;;);
+    }
+    setDisplay(ascCurrCom_m1);
+}
+
+void loop() 
+{
+  currentValueMotor();
+  setDisplay(ascCurrCom_m1);
+}
