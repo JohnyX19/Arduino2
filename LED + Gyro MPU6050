@@ -1,0 +1,90 @@
+
+#include <Wire.h>
+#include <MPU6050_light.h>
+
+MPU6050 mpu(Wire);
+unsigned long timer = 0;
+
+#define motor_1 9
+#define motor_2 11
+#define motor_3 10
+#define motor_4 12
+
+void setup() 
+{
+  Serial.begin(9600);                 
+  Wire.begin();
+  mpu.begin();    
+  mpu.calcGyroOffsets(); 
+  
+  pinMode(motor_1, OUTPUT);
+  pinMode(motor_2, OUTPUT);
+  pinMode(motor_3, OUTPUT);
+  pinMode(motor_4, OUTPUT);
+}
+
+double x = 0.0;
+double y = 0.0;
+
+double uholX_max = 10.0;
+double uholY_max = 10.0;
+double uholX_min = -10.0;
+double uholY_min = -10.0;
+
+
+void getAngleXY()
+{
+    mpu.update(); 
+    
+    x = (double)mpu.getAngleX();
+    y = (double)mpu.getAngleY();
+}
+
+void loop() 
+{
+    getAngleXY();
+  
+    if(x>uholX_max)
+    {
+      digitalWrite(motor_2, HIGH);
+      digitalWrite(motor_4, HIGH);
+      getAngleXY();
+    }
+    
+    if(x<uholX_min)
+    {
+      digitalWrite(motor_1, HIGH);
+      digitalWrite(motor_3, HIGH);
+      getAngleXY();
+    }
+    
+    if(y>uholY_max)
+    {
+      digitalWrite(motor_3, HIGH);
+      digitalWrite(motor_4, HIGH);
+      getAngleXY();
+    }
+    
+    if(y<uholY_min)
+    {
+      digitalWrite(motor_1, HIGH);
+      digitalWrite(motor_2, HIGH);
+      getAngleXY();
+    }
+    
+	
+    // delay(500);
+    if((millis()-timer)>500)
+    {
+    	digitalWrite(motor_1, LOW);
+    	digitalWrite(motor_2, LOW);
+    	digitalWrite(motor_3, LOW);
+    	digitalWrite(motor_4, LOW);
+	timer = millis(); 
+    }
+
+    Serial.print("X : ");
+    Serial.print(x);
+    Serial.print(" Y : ");
+    Serial.println(y);
+}
