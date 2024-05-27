@@ -1,0 +1,360 @@
+
+#include <Wire.h>
+
+#define m1_EL_Start_Stop 39  
+#define m1_Signal_hall 2
+#define m1_ZF_Direction 38
+#define m1_VR_speed 4
+
+#define m2_EL_Start_Stop 27  
+#define m2_Signal_hall 3
+#define m2_ZF_Direction 26
+#define m2_VR_speed 5
+
+#define m3_EL_Start_Stop 31  
+#define m3_Signal_hall 18
+#define m3_ZF_Direction 30
+#define m3_VR_speed 6
+
+#define m4_EL_Start_Stop 35  
+#define m4_Signal_hall 19
+#define m4_ZF_Direction 34
+#define m4_VR_speed 7
+
+
+// 0-forward; 1-backward
+int poloha = 0;
+
+int endOfProcess = 0;
+int endOfSlowClosing = 0;
+
+long pos_m1=0;int steps_m1=0;int speed_m1=0;
+String direction_m1;
+long pos_m2=0;int steps_m2=0;int speed_m2=0;
+String direction_m2;
+long pos_m3=0;int steps_m3=0;int speed_m3=0;
+String direction_m3;
+long pos_m4=0;int steps_m4=0;int speed_m4=0;
+String direction_m4;
+
+// eeprom support variables + functions
+#define eeprom B1010000
+
+char valueMemory[50];
+String msgStringMemory;
+long count_impulse_m1;
+
+int statusPosition;
+
+void writeAT24( int deviceAddress, unsigned int msgReadAddress, byte* data, byte dataLength ) 
+{
+  Wire.beginTransmission(deviceAddress);
+  Wire.write((int)(msgReadAddress >> 8));
+  Wire.write((int)(msgReadAddress & 0xFF));
+  byte c;
+  for ( c = 0; c < dataLength; c++)
+  {
+    Wire.write(data[c]);
+  }
+  Wire.endTransmission();
+}
+
+void readAT24( int deviceAddress, unsigned int readAddress, byte *buffer, int dataLength ) 
+{
+  Wire.beginTransmission(deviceAddress);
+  Wire.write((int)(readAddress >> 8)); 
+  Wire.write((int)(readAddress & 0xFF)); 
+  Wire.endTransmission();
+  Wire.requestFrom(deviceAddress,dataLength);
+  int c = 0;
+  for ( c = 0; c < dataLength; c++ )
+  {
+    if (Wire.available())
+    {
+      buffer[c] = Wire.read();
+    }
+  }
+}
+
+void savePositionToMemory(String i)
+{
+  msgStringMemory = i;
+  msgStringMemory.toCharArray(valueMemory, sizeof(valueMemory));
+  writeAT24(eeprom, 100, (byte *)valueMemory, sizeof(valueMemory));
+}
+
+void loadPositionFromMemory()
+{
+  readAT24(eeprom, 100, (byte *)valueMemory, sizeof(valueMemory));
+  delay(100);
+  String msgStringMemory_m(valueMemory);
+  msgStringMemory = msgStringMemory_m;
+}
+
+void saveValuesPosition(int p, unsigned int m1, unsigned int m2, unsigned int m3, unsigned int m4)
+{
+  String msgP = String(p);
+  String msg_m1 = String(m1);
+  String msg_m2 = String(m2);
+  String msg_m3 = String(m3);
+  String msg_m4 = String(m4);
+
+  String msg = msgP + ":" + msg_m1 + ":" + msg_m2 + ":" + msg_m3 + ":" + msg_m4;
+  savePositionToMemory(msg);
+  //Serial.print("Ulozene hodnoty : ");
+  //Serial.println(msg);
+}
+
+void loadValuesPosition(String s)
+{
+  int s_int = s.length()+1;
+  char char_array[s_int];
+  s.toCharArray(char_array, s_int);
+  
+  char *strings[5];
+  char *ptr = NULL;
+    
+  byte index = 0;
+  ptr = strtok(char_array, ":");
+  while (ptr != NULL)
+  {
+    strings[index] = ptr;
+    index++;
+    ptr = strtok(NULL, ":");
+  }
+  
+  statusPosition = atoi(strings[0]);
+  count_impulse_m1 = atoi(strings[1]);
+
+  poloha = statusPosition;
+  pos_m1 = count_impulse_m1;
+  //Serial.print("Nacitna poloha : ");
+  //Serial.println(poloha);
+}
+
+
+void impulse_counter_m1() 
+{
+    if(poloha == 0)
+    {
+      pos_m1++;
+    }
+    else
+    {
+      pos_m1--;
+    }
+}
+
+void impulse_counter_m2() 
+{
+    if(poloha == 0)
+    {
+      pos_m2++;
+    }
+    else
+    {
+      pos_m2--;
+    }
+}
+
+void impulse_counter_m3() 
+{
+    if(poloha == 0)
+    {
+      pos_m3++;
+    }
+    else
+    {
+      pos_m3--;
+    }
+}
+
+void impulse_counter_m4() 
+{
+    if(poloha == 0)
+    {
+      pos_m4++;
+    }
+    else
+    {
+      pos_m4--;
+    }
+}
+
+
+void setup() 
+{
+    Serial.begin(9600);
+    
+    pinMode(m1_EL_Start_Stop, OUTPUT);
+    pinMode(m1_Signal_hall, INPUT);  
+    pinMode(m1_ZF_Direction, OUTPUT);
+    pinMode(m1_VR_speed, OUTPUT);
+  
+    pinMode(m2_EL_Start_Stop, OUTPUT);
+    pinMode(m2_Signal_hall, INPUT);  
+    pinMode(m2_ZF_Direction, OUTPUT);
+    pinMode(m2_VR_speed, OUTPUT);
+  
+    pinMode(m3_EL_Start_Stop, OUTPUT);
+    pinMode(m3_Signal_hall, INPUT);  
+    pinMode(m3_ZF_Direction, OUTPUT);
+    pinMode(m3_VR_speed, OUTPUT);
+  
+    pinMode(m4_EL_Start_Stop, OUTPUT);
+    pinMode(m4_Signal_hall, INPUT);  
+    pinMode(m4_ZF_Direction, OUTPUT);
+    pinMode(m4_VR_speed, OUTPUT);
+    
+    attachInterrupt(digitalPinToInterrupt(m1_Signal_hall), impulse_counter_m1, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(m2_Signal_hall), impulse_counter_m2, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(m3_Signal_hall), impulse_counter_m3, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(m4_Signal_hall), impulse_counter_m4, CHANGE);
+
+    loadPositionFromMemory();
+    loadValuesPosition(msgStringMemory);
+}
+
+long poloha0 = 10;
+long poloha1 = 200;
+long poloha2 = 800;
+long poloha3 = 1100;
+
+void loop() 
+{
+      if(endOfProcess == 0)
+      {
+          if(poloha == 0)
+          {
+              driveForward();
+          }
+          else
+          {
+              driveBackward();
+          }
+      }
+      else
+      {
+          zastav();
+      }
+    
+}
+
+void driveForward()
+{
+    if(pos_m1 < poloha1)
+    {
+      vysuvanie(50);
+      Vypis();
+    }
+    else if(
+      (pos_m1 >= poloha1 && pos_m1 < poloha2)
+      )
+    {
+      vysuvanie(100);
+      Vypis();
+    }
+    else if(
+      (pos_m1 >= poloha2 && pos_m1 < poloha3)
+      )
+    {
+      vysuvanie(40);
+      Vypis();
+    }
+    else
+    {
+        poloha = 1;
+        endOfProcess = 1;
+        saveValuesPosition(poloha, pos_m1, pos_m2, pos_m3, pos_m4); 
+        zastav();
+        Vypis();
+        delay(1000);
+    }
+
+}
+
+void driveBackward()
+{
+    if(pos_m1 > poloha3)
+    {
+      zasuvanie(50);
+      Vypis();
+    }
+    else if(
+      (pos_m1<= poloha3 && pos_m1 > poloha2)
+      )
+    {
+      zasuvanie(70);
+      Vypis();
+    }
+    else if(
+      (pos_m1<= poloha2 && pos_m1 > poloha1)
+      )
+    {
+      zasuvanie(40);
+      Vypis();
+    }
+    else
+    {
+      slowClosing();
+      zastav();
+      poloha = 0;
+      endOfProcess = 1;
+      saveValuesPosition(poloha, 0, 0, 0, 0);
+      Vypis();
+      delay(1000);
+    }
+}
+
+void slowClosing()
+{
+    while(endOfSlowClosing == 0)
+    {
+        Vypis();
+        if(pos_m1 > poloha0)
+        {
+          
+            zasuvanie(20);
+            
+            if(pos_m1 <= poloha0)
+            {
+                zastav();
+            }
+
+        }
+        else
+        {
+            zastav();
+            endOfSlowClosing = 1;
+        }
+    }
+}
+
+void vysuvanie(int rychlost)
+{
+  analogWrite(m1_VR_speed, rychlost);
+  digitalWrite(m1_ZF_Direction,LOW);
+  digitalWrite(m1_EL_Start_Stop,HIGH);
+}
+
+void zasuvanie(int rychlost)
+{
+  analogWrite(m1_VR_speed, rychlost);
+  digitalWrite(m1_ZF_Direction,HIGH);
+  digitalWrite(m1_EL_Start_Stop,HIGH);
+}
+
+void zastav()
+{
+  digitalWrite(m1_EL_Start_Stop,LOW);
+}
+
+void Vypis()
+{
+    Serial.print(" Poloha : ");
+    Serial.print(poloha);
+    Serial.print(" M1 impulse : ");
+    Serial.print(pos_m1);
+    Serial.println();
+}
+
